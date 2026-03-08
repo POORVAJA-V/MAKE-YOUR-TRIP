@@ -49,30 +49,24 @@ const MyBookings = () => {
         return { title, destination };
     };
 
-    // Generates a SHORT plain-text summary for the QR code — scannable by any phone camera
-    const getQRText = (b) => {
-        const d = b.itemDetails || {};
-        const ref = `MYT-${(b._id || '').slice(-8).toUpperCase()}`;
-        const date = new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    // Generates a scannable URL pointing to the BookingView page with slim booking data embedded
+    const getQRUrl = (b) => {
         const { title, destination } = getTripDetails(b);
-
-        const lines = [
-            'MAKEYOURTRIP E-TICKET',
-            '--------------------',
-            `Ref: ${ref}`,
-            `Type: ${b.bookingType}`,
-            `Trip: ${title}`,
-            `Route: ${destination}`,
-            `Amount: Rs.${b.totalPrice}`,
-            `Status: ${b.paymentStatus === 'Paid' ? 'Confirmed' : 'Pending'}`,
-            `Booked: ${date}`,
-        ];
-
-        if (d.departureTime) {
-            lines.push(`Departs: ${new Date(d.departureTime).toLocaleString()}`);
-        }
-
-        return lines.join('\n');
+        const slim = {
+            id: (b._id || '').slice(-8).toUpperCase(),
+            _id: b._id,
+            type: b.bookingType,
+            title,
+            route: destination,
+            price: b.totalPrice,
+            status: b.paymentStatus,
+            date: b.createdAt,
+            dep: b.itemDetails?.departureTime || null,
+            arr: b.itemDetails?.arrivalTime || null,
+            passengers: b.passengers || [],
+        };
+        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(slim))));
+        return `${window.location.origin}/booking/${b._id || 'ticket'}?data=${encoded}`;
     };
 
     return (
@@ -179,11 +173,11 @@ const MyBookings = () => {
 
                                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center flex-shrink-0">
                                         <img
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=6&data=${encodeURIComponent(getQRText(selectedBooking))}`}
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=4&data=${encodeURIComponent(getQRUrl(selectedBooking))}`}
                                             alt="Booking QR Code"
                                             className="w-36 h-36"
                                         />
-                                        <span className="text-xs font-bold text-slate-400 mt-3 tracking-widest uppercase">Scan for Details</span>
+                                        <span className="text-xs font-bold text-slate-400 mt-3 tracking-widest uppercase">Scan to Download Ticket</span>
                                     </div>
                                 </div>
                             </div>
