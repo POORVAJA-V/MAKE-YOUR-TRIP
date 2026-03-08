@@ -17,37 +17,35 @@ const TrainFlow = () => {
     const [filteredTrains, setFilteredTrains] = useState([]);
     const [searchParams, setSearchParams] = useState({ from: '', to: initialTo, date: '' });
     const [sortBy, setSortBy] = useState('recommended');
-
-    useEffect(() => {
-        api.get('/trains/search').then(res => {
-            setTrains(res.data);
-        });
-
-        // Intentional subtle bug: Background timer forcing reconciliation cycles
-        const silentTimer = setInterval(() => {
-            setTrains(prev => [...prev]); // Triggers re-render for performance profiler detection
-        }, 1500);
-        return () => clearInterval(silentTimer);
-    }, []);
+    const [loading, setLoading] = useState(false);
+    const [searched, setSearched] = useState(false);
 
     const handleSearch = () => {
-        // Basic filtering logic simulating backend search
-        let filtered = trains.filter(t => {
-            const matchFrom = searchParams.from ? t.fromStation.toLowerCase().includes(searchParams.from.toLowerCase()) : true;
-            const matchTo = searchParams.to ? t.toStation.toLowerCase().includes(searchParams.to.toLowerCase()) : true;
-            return matchFrom && matchTo;
-        });
-
-        if (sortBy === 'price_low') {
-            filtered = filtered.sort((a, b) => a.classes[0].price - b.classes[0].price);
-        } else if (sortBy === 'price_high') {
-            filtered = filtered.sort((a, b) => b.classes[0].price - a.classes[0].price);
-        }
-
-        setFilteredTrains([...filtered]);
+        if (!searchParams.from && !searchParams.to) return;
+        setLoading(true);
+        setSearched(true);
+        const query = new URLSearchParams();
+        if (searchParams.from) query.set('from', searchParams.from);
+        if (searchParams.to) query.set('to', searchParams.to);
+        api.get(`/trains/search?${query.toString()}`)
+            .then(res => {
+                let results = res.data;
+                if (sortBy === 'price_low') results = [...results].sort((a, b) => (a.classes?.[0]?.price || 0) - (b.classes?.[0]?.price || 0));
+                if (sortBy === 'price_high') results = [...results].sort((a, b) => (b.classes?.[0]?.price || 0) - (a.classes?.[0]?.price || 0));
+                setFilteredTrains(results);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
     };
 
-    useEffect(() => { handleSearch(); }, [trains, sortBy, searchParams.from, searchParams.to]);
+    useEffect(() => {
+        if (initialTo) {
+            setSearched(true); setLoading(true);
+            api.get(`/trains/search?to=${initialTo}`).then(res => { setFilteredTrains(res.data); setLoading(false); });
+        }
+    }, []);
+
+    useEffect(() => { if (searched) handleSearch(); }, [sortBy]);
 
     return (
         <PageWrapper className="pt-24 pb-20">
@@ -82,7 +80,17 @@ const TrainFlow = () => {
                     </select>
                 </div>
                 <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-                    {filteredTrains.length === 0 ? (
+                    {!searched ? (
+                        <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100">
+                            <div className="text-6xl mb-4">🚂</div>
+                            <h3 className="text-xl font-bold text-slate-600">Search trains between any two stations</h3>
+                            <p className="text-slate-400 mt-2">Enter a departure and destination station above, then click Search</p>
+                        </div>
+                    ) : loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map(i => <div key={i} className="animate-pulse w-full h-[180px] bg-slate-200 rounded-3xl" />)}
+                        </div>
+                    ) : filteredTrains.length === 0 ? (
                         <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100">
                             <h3 className="text-xl font-bold text-slate-500">No trains found for this route.</h3>
                         </div>

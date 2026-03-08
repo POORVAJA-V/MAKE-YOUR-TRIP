@@ -17,19 +17,31 @@ const BusFlow = () => {
     const [searchParams, setSearchParams] = useState({ from: '', to: initialTo, date: '' });
     const [sortBy, setSortBy] = useState('recommended');
     const [filterAC, setFilterAC] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [searched, setSearched] = useState(false);
 
     const sortedBuses = [...buses]
-        .filter(b => !filterAC || b.amenities.includes('AC'))
-        .filter(b => searchParams.from ? b.routeFrom.toLowerCase().includes(searchParams.from.toLowerCase()) : true)
-        .filter(b => searchParams.to ? b.routeTo.toLowerCase().includes(searchParams.to.toLowerCase()) : true)
+        .filter(b => !filterAC || (b.amenities && b.amenities.includes('AC')))
         .sort((a, b) => {
             if (sortBy === 'price_low') return a.price - b.price;
             if (sortBy === 'price_high') return b.price - a.price;
             return 0;
         });
 
+    const handleSearch = () => {
+        if (!searchParams.from || !searchParams.to) return;
+        setLoading(true);
+        setSearched(true);
+        api.get(`/buses/search?from=${searchParams.from}&to=${searchParams.to}`)
+            .then(res => { setBuses(res.data); setLoading(false); })
+            .catch(() => setLoading(false));
+    };
+
     useEffect(() => {
-        api.get('/buses/search').then(res => setBuses(res.data));
+        if (initialTo) {
+            setSearched(true); setLoading(true);
+            api.get(`/buses/search?to=${initialTo}`).then(res => { setBuses(res.data); setLoading(false); });
+        }
     }, []);
 
     return (
@@ -45,6 +57,9 @@ const BusFlow = () => {
                     <LocationAutocomplete placeholder="From City..." value={searchParams.from} onChange={(val) => setSearchParams({ ...searchParams, from: val })} icon="📍" />
                     <LocationAutocomplete placeholder="To City..." value={searchParams.to} onChange={(val) => setSearchParams({ ...searchParams, to: val })} icon="🛑" />
                     <DateSelector value={searchParams.date} onChange={(val) => setSearchParams({ ...searchParams, date: val })} />
+                    <button onClick={handleSearch} className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-xl font-bold text-base shadow-lg transition-colors whitespace-nowrap">
+                        Search
+                    </button>
                 </div>
             </motion.div>
 
@@ -70,8 +85,18 @@ const BusFlow = () => {
                 </div>
 
                 <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {sortedBuses.length === 0 ? (
-                        <div className="col-span-2 py-20 text-center">
+                    {!searched ? (
+                        <div className="col-span-3 py-20 text-center">
+                            <div className="text-6xl mb-4">🚌</div>
+                            <h3 className="text-xl font-bold text-slate-600">Search for buses between any two cities</h3>
+                            <p className="text-slate-400 mt-2">Enter a departure and destination city above, then click Search</p>
+                        </div>
+                    ) : loading ? (
+                        <div className="col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[1, 2, 3].map(i => <div key={i} className="animate-pulse w-full h-[300px] bg-slate-200 rounded-3xl" />)}
+                        </div>
+                    ) : sortedBuses.length === 0 ? (
+                        <div className="col-span-3 py-20 text-center">
                             <div className="animate-pulse w-full h-[200px] bg-slate-200 rounded-3xl mb-6 flex justify-center items-center text-4xl">🚌</div>
                         </div>
                     ) : (

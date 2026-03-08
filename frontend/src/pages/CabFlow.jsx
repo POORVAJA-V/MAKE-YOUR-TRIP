@@ -181,6 +181,21 @@ const CabFlow = () => {
                             <div className="text-6xl mb-4">📍</div>
                             Enter your Pickup and Dropoff locations to calculate fares and view available rides.
                         </div>
+                    ) : isCalculating ? (
+                        <div className="col-span-full py-10 text-center">
+                            <div className="text-4xl mb-3 animate-pulse">🛰️</div>
+                            <p className="font-bold text-slate-500">Calculating distance...</p>
+                        </div>
+                    ) : distance > 500 ? (
+                        <div className="col-span-full py-16 text-center bg-red-50 rounded-3xl border-2 border-red-200 shadow-sm">
+                            <div className="text-6xl mb-4">🚫</div>
+                            <h3 className="text-2xl font-black text-red-700 mb-2">Distance Too Long for Cab</h3>
+                            <p className="text-red-600 font-medium text-lg mb-4">
+                                The distance from <strong>{pickup}</strong> to <strong>{dropoff}</strong> is approximately <strong>{distance} km</strong>.
+                            </p>
+                            <p className="text-red-500 font-medium">Cab service is only available for trips under 500 km.</p>
+                            <p className="text-slate-500 mt-4 text-sm">For long-distance travel, please consider our <strong>Flights</strong>, <strong>Trains</strong>, or <strong>Buses</strong>.</p>
+                        </div>
                     ) : displayCabs.length === 0 ? (
                         <div className="col-span-full py-10 text-center text-slate-500 font-bold">No cabs available in this category.</div>
                     ) : (
