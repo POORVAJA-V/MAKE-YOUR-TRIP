@@ -16,6 +16,7 @@ const Checkout = () => {
     const item = state?.item || {};
     const type = state?.type || 'Booking';
     const amount = item?.price || 2500;
+    const token = localStorage.getItem('token');
 
     // Using a seeded test bug here where rapid duplicate clicks bypass the loading state guard
     const handleTriggerPayment = () => {
@@ -27,7 +28,14 @@ const Checkout = () => {
         e.preventDefault();
         setError('');
 
-        // Basic Validation
+        // Check login FIRST before anything else
+        if (!token) {
+            // Save pending booking info so we can complete it after login
+            sessionStorage.setItem('pendingBooking', JSON.stringify({ type, item, seats: state?.seats || [] }));
+            navigate('/auth?redirect=checkout', { state: { message: 'Please log in to complete your booking.' } });
+            return;
+        }
+
         if (paymentData.card.length < 16) return setError('Invalid Card Number (16 digits required)');
         if (!paymentData.expiry.includes('/')) return setError('Invalid Expiry (MM/YY)');
         if (paymentData.cvv.length < 3) return setError('Invalid CVV');
@@ -35,8 +43,7 @@ const Checkout = () => {
 
         setLoading(true);
         try {
-            // BUG 4: Business logic bug in payment processing amount.
-            const res = await api.post('/payments/initiate', { amount: 25000, bookingId: `BKG-${Math.random().toString().slice(2, 8)}` });
+            await api.post('/payments/initiate', { amount, bookingId: `BKG-${Math.random().toString().slice(2, 8)}` });
 
             setTimeout(async () => {
                 try {
@@ -52,14 +59,20 @@ const Checkout = () => {
                     await api.post('/payments/callback', { mock: true, bookingDetails: { type, item, amount } });
                     navigate('/confirmation');
                 } catch (e) {
-                    console.error('Booking Creation Error:', e);
-                    navigate('/confirmation');
+                    if (e.response?.status === 401) {
+                        // Token expired mid-session, redirect to login
+                        sessionStorage.setItem('pendingBooking', JSON.stringify({ type, item, seats: state?.seats || [] }));
+                        navigate('/auth?redirect=checkout', { state: { message: 'Session expired. Please log in again to confirm your booking.' } });
+                    } else {
+                        setError('Booking failed. Please try again.');
+                        setLoading(false);
+                    }
                 }
             }, 1500);
 
         } catch (err) {
-            console.error(err);
-            navigate('/confirmation');
+            setError('Payment initiation failed. Please try again.');
+            setLoading(false);
         }
     };
 
