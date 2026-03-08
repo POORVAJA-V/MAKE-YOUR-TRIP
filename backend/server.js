@@ -167,13 +167,22 @@ app.put('/api/v1/auth/profile', protect, async (req, res) => {
 // Hotels
 app.get('/api/v1/hotels/search', async (req, res) => {
     const { city } = req.query;
-    const filter = city ? { city: new RegExp(city, 'i') } : {};
-    const hotels = await Hotel.find(filter);
+    const targetCity = city || 'Mumbai';
+    let hotels = generateHotels(targetCity, 7);
+    try {
+        const dbHotels = await Hotel.find({ city: new RegExp(targetCity, 'i') }).lean();
+        if (dbHotels.length > 0) {
+            const pad = dbHotels.length < 7 ? generateHotels(targetCity, 7 - dbHotels.length) : [];
+            hotels = [...dbHotels, ...pad];
+        }
+    } catch (_) { }
     res.json(hotels);
 });
 app.get('/api/v1/hotels/:id', async (req, res) => {
-    const hotel = await Hotel.findById(req.params.id);
-    res.json(hotel);
+    try {
+        if (req.params.id.startsWith('dyn-')) return res.json({ _id: req.params.id });
+        res.json(await Hotel.findById(req.params.id));
+    } catch { res.json({}); }
 });
 app.get('/api/v1/hotels/:id/rooms', async (req, res) => {
     const hotel = await Hotel.findById(req.params.id);
@@ -322,22 +331,6 @@ const generateHotels = (city, count = 8) => {
         ],
     }));
 };
-
-// ── Hotels ────────────────────────────────────────────────────────────────────
-app.get('/api/v1/hotels/search', async (req, res) => {
-    const { city } = req.query;
-    const targetCity = city || 'Mumbai';
-    // Pre-generate dynamic results — guaranteed 7 hotels for ANY city
-    let hotels = generateHotels(targetCity, 7);
-    try {
-        const dbHotels = await Hotel.find({ city: new RegExp(targetCity, 'i') }).lean();
-        if (dbHotels.length > 0) {
-            const pad = dbHotels.length < 7 ? generateHotels(targetCity, 7 - dbHotels.length) : [];
-            hotels = [...dbHotels, ...pad];
-        }
-    } catch (_) { /* Keep dynamic base */ }
-    res.json(hotels);
-});
 
 // ── Flights ───────────────────────────────────────────────────────────────────
 app.get('/api/v1/flights/search', async (req, res) => {
