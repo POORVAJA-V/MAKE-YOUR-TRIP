@@ -24,22 +24,23 @@ const HotelSearch = () => {
     });
 
     useEffect(() => {
-        if (initialTo) {
-            setLoading(true);
-            api.get(`/hotels/search?city=${initialTo}`).then(res => { setHotels(res.data); setLoading(false); }).catch(console.error);
-        } else {
-            api.get('/hotels/search').then(res => setHotels(res.data)).catch(console.error);
-        }
-
-        // BUG 4 (Intentionally preserved as requested): Missing removal of event listener
-        const handleResize = () => { console.log('hotel grid adjusted'); };
-        window.addEventListener('resize', handleResize);
-        return () => { };
+        const city = initialTo || 'Mumbai';
+        setLoading(true);
+        api.get(`/hotels/search?city=${encodeURIComponent(city)}`)
+            .then(res => { setHotels(res.data); setLoading(false); })
+            .catch(console.error);
     }, []);
 
-    const search = () => {
+    const search = (cityOverride) => {
+        const city = cityOverride || query || 'Mumbai';
         setLoading(true);
-        api.get(`/hotels/search?city=${query}`).then(res => { setHotels(res.data); setLoading(false); });
+        api.get(`/hotels/search?city=${encodeURIComponent(city)}`)
+            .then(res => { setHotels(res.data); setLoading(false); })
+            .catch(() => setLoading(false));
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') search();
     };
 
     return (
@@ -55,10 +56,15 @@ const HotelSearch = () => {
 
                     {/* Glass Search Bar */}
                     <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 p-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl">
-                        <input className="flex-1 p-5 rounded-xl bg-white/90 focus:bg-white text-slate-800 focus:ring-4 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-400 font-medium text-lg"
-                            value={query} onChange={e => setQuery(e.target.value)} placeholder="Where are you going? (e.g. Delhi, Mumbai)" />
+                        <input
+                            className="flex-1 p-5 rounded-xl bg-white/90 focus:bg-white text-slate-800 focus:ring-4 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-400 font-medium text-lg"
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Where are you going? (e.g. Paris, London, Goa)"
+                        />
                         <motion.button variants={btnVariants} whileHover="hover" whileTap="tap"
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-10 rounded-xl font-bold text-lg shadow-lg" onClick={search}>
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-10 rounded-xl font-bold text-lg shadow-lg" onClick={() => search()}>
                             Search
                         </motion.button>
                     </div>

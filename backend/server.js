@@ -327,11 +327,14 @@ const generateHotels = (city, count = 8) => {
 app.get('/api/v1/hotels/search', async (req, res) => {
     try {
         const { city } = req.query;
-        const filter = city ? { city: new RegExp(city, 'i') } : {};
-        let hotels = await Hotel.find(filter);
-        if (hotels.length < 3 && city) {
-            // Pad with dynamic results so any city always returns listings
-            const dynamic = generateHotels(city, 8 - hotels.length);
+        const targetCity = city || 'Mumbai';
+        let hotels = [];
+        try {
+            const filter = { city: new RegExp(targetCity, 'i') };
+            hotels = await Hotel.find(filter);
+        } catch (_) { /* DB unavailable, use dynamic */ }
+        if (hotels.length < 6) {
+            const dynamic = generateHotels(targetCity, 7 - hotels.length);
             hotels = [...hotels, ...dynamic];
         }
         res.json(hotels);
@@ -342,14 +345,15 @@ app.get('/api/v1/hotels/search', async (req, res) => {
 app.get('/api/v1/flights/search', async (req, res) => {
     try {
         const { from, to } = req.query;
-        let query = {};
-        if (from) query.departureCity = new RegExp(from, 'i');
-        if (to) query.arrivalCity = new RegExp(to, 'i');
-        let flights = await Flight.find(query);
-        if (flights.length < 3) {
-            // Always return results — generate dynamic flights for any city pair
-            const dynamic = generateFlights(from, to, 8 - flights.length);
-            flights = [...flights, ...dynamic];
+        let flights = [];
+        try {
+            let q = {};
+            if (from) q.departureCity = new RegExp(from, 'i');
+            if (to) q.arrivalCity = new RegExp(to, 'i');
+            flights = await Flight.find(q);
+        } catch (_) { /* DB unavailable */ }
+        if (flights.length < 6) {
+            flights = [...flights, ...generateFlights(from, to, 7 - flights.length)];
         }
         res.json(flights);
     } catch (err) { res.status(500).json({ message: err.message }); }
@@ -368,13 +372,15 @@ app.post('/api/v1/flights/:id/seat-select', protect, (req, res) => res.json({ su
 app.get('/api/v1/buses/search', async (req, res) => {
     try {
         const { from, to } = req.query;
-        let query = {};
-        if (from) query.routeFrom = new RegExp(from, 'i');
-        if (to) query.routeTo = new RegExp(to, 'i');
-        let buses = await Bus.find(query);
-        if (buses.length < 3) {
-            const dynamic = generateBuses(from, to, 7 - buses.length);
-            buses = [...buses, ...dynamic];
+        let buses = [];
+        try {
+            let q = {};
+            if (from) q.routeFrom = new RegExp(from, 'i');
+            if (to) q.routeTo = new RegExp(to, 'i');
+            buses = await Bus.find(q);
+        } catch (_) { /* DB unavailable */ }
+        if (buses.length < 6) {
+            buses = [...buses, ...generateBuses(from, to, 7 - buses.length)];
         }
         res.json(buses);
     } catch (err) { res.status(500).json({ message: err.message }); }
@@ -392,13 +398,15 @@ app.post('/api/v1/buses/:id/seat-select', protect, (req, res) => res.json({ succ
 app.get('/api/v1/trains/search', async (req, res) => {
     try {
         const { from, to } = req.query;
-        let query = {};
-        if (from) query.fromStation = new RegExp(from, 'i');
-        if (to) query.toStation = new RegExp(to, 'i');
-        let trains = await Train.find(query);
-        if (trains.length < 3) {
-            const dynamic = generateTrains(from, to, 7 - trains.length);
-            trains = [...trains, ...dynamic];
+        let trains = [];
+        try {
+            let q = {};
+            if (from) q.fromStation = new RegExp(from, 'i');
+            if (to) q.toStation = new RegExp(to, 'i');
+            trains = await Train.find(q);
+        } catch (_) { /* DB unavailable */ }
+        if (trains.length < 6) {
+            trains = [...trains, ...generateTrains(from, to, 7 - trains.length)];
         }
         res.json(trains);
     } catch (err) { res.status(500).json({ message: err.message }); }

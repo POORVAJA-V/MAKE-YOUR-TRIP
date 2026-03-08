@@ -56,14 +56,18 @@ const FlightSearch = () => {
 
                     <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3 p-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl">
                         <input className="flex-1 p-3 rounded-xl bg-white/90 focus:bg-white text-slate-800 focus:ring-4 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-500 font-medium text-base"
-                            value={from} onChange={e => setFrom(e.target.value)} placeholder="Leaving from..." />
+                            value={from} onChange={e => setFrom(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="Leaving from..." />
 
                         <div className="hidden md:flex items-center justify-center bg-white/20 text-white rounded-full w-12 h-12 shadow-inner self-center mx-2">
                             <span className="text-xl">✈️</span>
                         </div>
 
                         <input className="flex-1 p-3 rounded-xl bg-white/90 focus:bg-white text-slate-800 focus:ring-4 focus:ring-indigo-500/50 outline-none transition-all placeholder-slate-500 font-medium text-base"
-                            value={to} onChange={e => setTo(e.target.value)} placeholder="Going to..." />
+                            value={to} onChange={e => setTo(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            placeholder="Going to..." />
 
                         <motion.button variants={btnVariants} whileHover="hover" whileTap="tap"
                             className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 rounded-xl font-bold text-base shadow-lg" onClick={handleSearch}>
