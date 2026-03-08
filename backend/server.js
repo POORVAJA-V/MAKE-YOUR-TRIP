@@ -325,38 +325,35 @@ const generateHotels = (city, count = 8) => {
 
 // ── Hotels ────────────────────────────────────────────────────────────────────
 app.get('/api/v1/hotels/search', async (req, res) => {
+    const { city } = req.query;
+    const targetCity = city || 'Mumbai';
+    // Pre-generate dynamic results — guaranteed 7 hotels for ANY city
+    let hotels = generateHotels(targetCity, 7);
     try {
-        const { city } = req.query;
-        const targetCity = city || 'Mumbai';
-        let hotels = [];
-        try {
-            const filter = { city: new RegExp(targetCity, 'i') };
-            hotels = await Hotel.find(filter);
-        } catch (_) { /* DB unavailable, use dynamic */ }
-        if (hotels.length < 6) {
-            const dynamic = generateHotels(targetCity, 7 - hotels.length);
-            hotels = [...hotels, ...dynamic];
+        const dbHotels = await Hotel.find({ city: new RegExp(targetCity, 'i') }).lean();
+        if (dbHotels.length > 0) {
+            const pad = dbHotels.length < 7 ? generateHotels(targetCity, 7 - dbHotels.length) : [];
+            hotels = [...dbHotels, ...pad];
         }
-        res.json(hotels);
-    } catch (err) { res.status(500).json({ message: err.message }); }
+    } catch (_) { /* Keep dynamic base */ }
+    res.json(hotels);
 });
 
 // ── Flights ───────────────────────────────────────────────────────────────────
 app.get('/api/v1/flights/search', async (req, res) => {
+    const { from, to } = req.query;
+    let flights = generateFlights(from, to, 7);
     try {
-        const { from, to } = req.query;
-        let flights = [];
-        try {
-            let q = {};
-            if (from) q.departureCity = new RegExp(from, 'i');
-            if (to) q.arrivalCity = new RegExp(to, 'i');
-            flights = await Flight.find(q);
-        } catch (_) { /* DB unavailable */ }
-        if (flights.length < 6) {
-            flights = [...flights, ...generateFlights(from, to, 7 - flights.length)];
+        let q = {};
+        if (from) q.departureCity = new RegExp(from, 'i');
+        if (to) q.arrivalCity = new RegExp(to, 'i');
+        const dbFlights = await Flight.find(q).lean();
+        if (dbFlights.length > 0) {
+            const pad = dbFlights.length < 7 ? generateFlights(from, to, 7 - dbFlights.length) : [];
+            flights = [...dbFlights, ...pad];
         }
-        res.json(flights);
-    } catch (err) { res.status(500).json({ message: err.message }); }
+    } catch (_) { }
+    res.json(flights);
 });
 app.get('/api/v1/flights/:id', async (req, res) => {
     try {
@@ -370,20 +367,19 @@ app.post('/api/v1/flights/:id/seat-select', protect, (req, res) => res.json({ su
 
 // ── Buses ─────────────────────────────────────────────────────────────────────
 app.get('/api/v1/buses/search', async (req, res) => {
+    const { from, to } = req.query;
+    let buses = generateBuses(from, to, 7);
     try {
-        const { from, to } = req.query;
-        let buses = [];
-        try {
-            let q = {};
-            if (from) q.routeFrom = new RegExp(from, 'i');
-            if (to) q.routeTo = new RegExp(to, 'i');
-            buses = await Bus.find(q);
-        } catch (_) { /* DB unavailable */ }
-        if (buses.length < 6) {
-            buses = [...buses, ...generateBuses(from, to, 7 - buses.length)];
+        let q = {};
+        if (from) q.routeFrom = new RegExp(from, 'i');
+        if (to) q.routeTo = new RegExp(to, 'i');
+        const dbBuses = await Bus.find(q).lean();
+        if (dbBuses.length > 0) {
+            const pad = dbBuses.length < 7 ? generateBuses(from, to, 7 - dbBuses.length) : [];
+            buses = [...dbBuses, ...pad];
         }
-        res.json(buses);
-    } catch (err) { res.status(500).json({ message: err.message }); }
+    } catch (_) { }
+    res.json(buses);
 });
 app.get('/api/v1/buses/:id', async (req, res) => {
     try {
@@ -396,20 +392,19 @@ app.post('/api/v1/buses/:id/seat-select', protect, (req, res) => res.json({ succ
 
 // ── Trains ────────────────────────────────────────────────────────────────────
 app.get('/api/v1/trains/search', async (req, res) => {
+    const { from, to } = req.query;
+    let trains = generateTrains(from, to, 7);
     try {
-        const { from, to } = req.query;
-        let trains = [];
-        try {
-            let q = {};
-            if (from) q.fromStation = new RegExp(from, 'i');
-            if (to) q.toStation = new RegExp(to, 'i');
-            trains = await Train.find(q);
-        } catch (_) { /* DB unavailable */ }
-        if (trains.length < 6) {
-            trains = [...trains, ...generateTrains(from, to, 7 - trains.length)];
+        let q = {};
+        if (from) q.fromStation = new RegExp(from, 'i');
+        if (to) q.toStation = new RegExp(to, 'i');
+        const dbTrains = await Train.find(q).lean();
+        if (dbTrains.length > 0) {
+            const pad = dbTrains.length < 7 ? generateTrains(from, to, 7 - dbTrains.length) : [];
+            trains = [...dbTrains, ...pad];
         }
-        res.json(trains);
-    } catch (err) { res.status(500).json({ message: err.message }); }
+    } catch (_) { }
+    res.json(trains);
 });
 app.get('/api/v1/trains/:id', async (req, res) => {
     try {
