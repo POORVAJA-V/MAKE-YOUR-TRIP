@@ -75,10 +75,12 @@ const BookingView = () => {
             {/* ── Print / PDF Styles ─────────────────────────── */}
             <style>{`
                 @media print {
-                    body { background: white !important; }
-                    .no-print { display: none !important; }
-                    .ticket-wrapper { box-shadow: none !important; max-width: 100% !important; }
-                    @page { margin: 10mm; size: A5 portrait; }
+                    @page { margin: 0; size: A4 portrait; }
+                    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+                    /* Force hide everything else */
+                    nav, header, footer, .no-print, .ticket-wrapper { display: none !important; }
+                    /* Show only the print container */
+                    .print-ticket-container { display: block !important; width: 100%; height: 100%; box-sizing: border-box; }
                 }
             `}</style>
 
@@ -179,38 +181,94 @@ const BookingView = () => {
                 </p>
             </div>
 
-            {/* ── Print-only version (full page, no bg) ──────── */}
-            <div className="hidden print:block p-8 max-w-lg mx-auto">
-                <div className="border-2 border-indigo-600 rounded-2xl overflow-hidden">
-                    <div className="bg-indigo-700 p-5 text-white">
-                        <div className="flex items-center gap-3 mb-3">
-                            <span className="text-3xl">{icon}</span>
-                            <span className="text-xs font-bold border border-white/40 px-2 py-1 rounded uppercase tracking-wider">{booking.type} E-Ticket</span>
+            {/* ── Print-only version (full page, perfectly sized) ──────── */}
+            <div className="hidden print-ticket-container">
+                <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+
+                    {/* Brand Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #4f46e5', paddingBottom: '20px', marginBottom: '30px' }}>
+                        <div>
+                            <h1 style={{ fontSize: '28px', color: '#1e1b4b', fontWeight: '900', margin: 0 }}>MakeYourTrip</h1>
+                            <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>Your Journey, Our Passion</p>
                         </div>
-                        <h1 className="text-2xl font-black">{booking.title}</h1>
-                        <p className="text-indigo-200 text-sm mt-1">{booking.route}</p>
-                    </div>
-                    <div className="border-t-2 border-dashed border-indigo-300" />
-                    <div className="p-5">
-                        <div className="flex justify-between mb-4">
-                            <div><p className="text-xs text-gray-500 uppercase font-bold">Booking Ref</p><p className="text-xl font-black tracking-widest">{ref}</p></div>
-                            <span className={`text-sm font-bold px-3 py-1 rounded-full h-fit ${isConfirmed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                {isConfirmed ? '✓ Confirmed' : '⚠ Pending'}
-                            </span>
-                        </div>
-                        {depStr && <div className="flex justify-between py-2 border-b border-dashed border-gray-200"><span className="text-xs font-bold text-gray-400 uppercase">Departure</span><span className="font-semibold text-sm">{depStr}</span></div>}
-                        {arrStr && <div className="flex justify-between py-2 border-b border-dashed border-gray-200"><span className="text-xs font-bold text-gray-400 uppercase">Arrival</span><span className="font-semibold text-sm">{arrStr}</span></div>}
-                        {booking.passengers?.length > 0 && <div className="flex justify-between py-2 border-b border-dashed border-gray-200"><span className="text-xs font-bold text-gray-400 uppercase">Seats</span><span className="font-semibold">{booking.passengers.join(', ')}</span></div>}
-                        <div className="flex justify-between py-2 border-b border-dashed border-gray-200"><span className="text-xs font-bold text-gray-400 uppercase">Booked On</span><span className="font-semibold">{bookedDate}</span></div>
-                        <div className="mt-4 bg-indigo-50 rounded-xl p-3 flex justify-between items-center border border-indigo-100">
-                            <span className="font-semibold text-gray-600">Total Paid</span>
-                            <span className="text-2xl font-black text-indigo-700">₹{booking.price}</span>
+                        <div style={{ textAlign: 'right' }}>
+                            <h2 style={{ fontSize: '24px', color: '#4f46e5', fontWeight: '900', margin: 0, textTransform: 'uppercase' }}>{booking.type} E-TICKET</h2>
+                            <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0', fontWeight: 'bold' }}>{isConfirmed ? 'CONFIRMED' : 'PENDING'}</p>
                         </div>
                     </div>
-                    <div className="bg-gray-900 px-5 py-3 flex justify-between items-center">
-                        <span className="text-white font-bold text-sm">🌐 MakeYourTrip</span>
-                        <span className="text-gray-400 text-xs">Your Journey, Our Passion</span>
+
+                    {/* Booking Details Box */}
+                    <div style={{ border: '2px solid #e5e7eb', borderRadius: '16px', overflow: 'hidden', marginBottom: '30px' }}>
+                        <div style={{ backgroundColor: '#f9fafb', padding: '20px', borderBottom: '2px solid #e5e7eb' }}>
+                            <p style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 4px 0', fontWeight: 'bold' }}>Booking Reference</p>
+                            <h3 style={{ fontSize: '24px', color: '#111827', margin: 0, fontWeight: '900', letterSpacing: '2px' }}>{ref}</h3>
+                        </div>
+
+                        <div style={{ padding: '30px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                    <span style={{ fontSize: '32px', marginRight: '15px' }}>{icon}</span>
+                                    <div>
+                                        <h2 style={{ fontSize: '22px', margin: 0, color: '#1f2937', fontWeight: '900' }}>{booking.title}</h2>
+                                        <p style={{ color: '#4f46e5', margin: '4px 0 0 0', fontWeight: 'bold', fontSize: '16px' }}>{booking.route}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Schedule Wrapper */}
+                        <div style={{ display: 'flex', borderTop: '2px solid #e5e7eb' }}>
+                            {depStr && (
+                                <div style={{ flex: 1, padding: '20px', borderRight: '2px solid #e5e7eb' }}>
+                                    <p style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 8px 0', fontWeight: 'bold' }}>Departure</p>
+                                    <p style={{ fontSize: '16px', color: '#111827', margin: 0, fontWeight: '800' }}>{depStr.split(',')[0]}</p>
+                                    <p style={{ fontSize: '14px', color: '#4b5563', margin: '4px 0 0 0', fontWeight: '600' }}>{depStr.split(',')[1]}</p>
+                                </div>
+                            )}
+                            {arrStr && (
+                                <div style={{ flex: 1, padding: '20px' }}>
+                                    <p style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 8px 0', fontWeight: 'bold' }}>Arrival</p>
+                                    <p style={{ fontSize: '16px', color: '#111827', margin: 0, fontWeight: '800' }}>{arrStr.split(',')[0]}</p>
+                                    <p style={{ fontSize: '14px', color: '#4b5563', margin: '4px 0 0 0', fontWeight: '600' }}>{arrStr.split(',')[1]}</p>
+                                </div>
+                            )}
+                            {!depStr && !arrStr && (
+                                <div style={{ flex: 1, padding: '20px' }}>
+                                    <p style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 8px 0', fontWeight: 'bold' }}>Date</p>
+                                    <p style={{ fontSize: '16px', color: '#111827', margin: 0, fontWeight: '800' }}>{bookedDate}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
+
+                    {/* Passenger & Payment Rows */}
+                    <div style={{ marginBottom: '30px' }}>
+                        {booking.passengers?.length > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', borderBottom: '1px dashed #d1d5db' }}>
+                                <span style={{ color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '13px', letterSpacing: '1px' }}>Passenger Seats</span>
+                                <span style={{ color: '#111827', fontWeight: '800' }}>{booking.passengers.join(', ')}</span>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', borderBottom: '1px dashed #d1d5db' }}>
+                            <span style={{ color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '13px', letterSpacing: '1px' }}>Booked On</span>
+                            <span style={{ color: '#111827', fontWeight: '800' }}>{bookedDate}</span>
+                        </div>
+                    </div>
+
+                    {/* Total Box */}
+                    <div style={{ backgroundColor: '#eef2ff', padding: '25px', borderRadius: '16px', border: '1px solid #c7d2fe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <p style={{ color: '#6366f1', margin: 0, fontWeight: 'bold', textTransform: 'uppercase', fontSize: '14px', letterSpacing: '1px' }}>Amount Paid</p>
+                        </div>
+                        <h2 style={{ color: '#4338ca', margin: 0, fontSize: '32px', fontWeight: '900' }}>₹{booking.price}</h2>
+                    </div>
+
+                    {/* Footer Warning */}
+                    <div style={{ marginTop: '50px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>
+                        <p>Please carry a valid photo ID matching the passenger names.</p>
+                        <p>This is a computer-generated document and does not require a physical signature.</p>
+                    </div>
+
                 </div>
             </div>
         </>

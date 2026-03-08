@@ -168,11 +168,11 @@ app.put('/api/v1/auth/profile', protect, async (req, res) => {
 app.get('/api/v1/hotels/search', async (req, res) => {
     const { city } = req.query;
     const targetCity = city || 'Mumbai';
-    let hotels = generateHotels(targetCity, 7);
+    let hotels = generateHotels(targetCity, 9);
     try {
         const dbHotels = await Hotel.find({ city: new RegExp(targetCity, 'i') }).lean();
         if (dbHotels.length > 0) {
-            const pad = dbHotels.length < 7 ? generateHotels(targetCity, 7 - dbHotels.length) : [];
+            const pad = dbHotels.length < 9 ? generateHotels(targetCity, 9 - dbHotels.length) : [];
             hotels = [...dbHotels, ...pad];
         }
     } catch (_) { }
