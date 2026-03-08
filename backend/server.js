@@ -16,6 +16,22 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'] }));
 app.use(express.json());
 
+// Root route — confirms the API is live
+app.get('/', (req, res) => {
+    res.json({
+        status: '✅ MakeYourTrip API is live',
+        version: '1.0.0',
+        message: 'This is the backend API. The frontend website is deployed separately on Vercel.',
+        endpoints: {
+            flights: '/api/v1/flights/search?from=Delhi&to=Mumbai',
+            hotels: '/api/v1/hotels/search?city=Mumbai',
+            buses: '/api/v1/buses/search?from=Delhi&to=Agra',
+            trains: '/api/v1/trains/search?from=Delhi&to=Mumbai',
+            cabs: '/api/v1/cabs/available',
+        }
+    });
+});
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret123';
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/travel-booking';
