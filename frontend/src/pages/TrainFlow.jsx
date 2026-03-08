@@ -19,15 +19,107 @@ const TrainFlow = () => {
     const [sortBy, setSortBy] = useState('recommended');
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
+    const [error, setError] = useState('');
+
+    // List of valid Indian cities/stations for validation
+    const validCities = [
+        'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Jaipur', 'Goa', 'Kochi',
+        'Ahmedabad', 'Lucknow', 'Chandigarh', 'Nagpur', 'Indore', 'Bhopal', 'Patna', 'Vadodara', 'Agra', 'Nashik',
+        'Varanasi', 'Surat', 'Jammu', 'Shrinagar', 'Ludhiana', 'Amritsar', 'Dehradun', 'Haridwar', 'Rishikesh',
+        'Mysore', 'Coimbatore', 'Madurai', 'Trivandrum', 'Bhubaneswar', 'Ranchi', 'Guwahati', 'Siliguri', 'Kanpur',
+        'Allahabad', 'Ajmer', 'Jodhpur', 'Udaipur', 'Kota', 'Bilaspur', 'Raipur', 'Durg', 'Bhilai', 'Warangal'
+    ];
+
+    // Load random trains on initial load
+    useEffect(() => {
+        loadRandomTrains();
+    }, []);
+
+    const loadRandomTrains = () => {
+        setLoading(true);
+        const popularRoutes = [
+            { from: 'Delhi', to: 'Mumbai' },
+            { from: 'Bangalore', to: 'Chennai' },
+            { from: 'Kolkata', to: 'Delhi' },
+            { from: 'Pune', to: 'Mumbai' },
+            { from: 'Jaipur', to: 'Delhi' },
+            { from: 'Lucknow', to: 'Delhi' }
+        ];
+        const randomRoute = popularRoutes[Math.floor(Math.random() * popularRoutes.length)];
+        
+        api.get(`/trains/search?from=${randomRoute.from}&to=${randomRoute.to}`)
+            .then(res => {
+                setTrains(res.data);
+                setFilteredTrains(res.data);
+                setSearchParams({ ...searchParams, from: randomRoute.from, to: randomRoute.to });
+                setLoading(false);
+                setSearched(true);
+            })
+            .catch(() => {
+                const dummyTrains = generateDummyTrains(randomRoute.from, randomRoute.to);
+                setTrains(dummyTrains);
+                setFilteredTrains(dummyTrains);
+                setSearchParams({ ...searchParams, from: randomRoute.from, to: randomRoute.to });
+                setLoading(false);
+                setSearched(true);
+            });
+    };
+
+    // Generate dummy trains
+    const generateDummyTrains = (fromCity, toCity) => {
+        const trainNames = ['Rajdhani Express', 'Shatabdi Express', 'Duronto Express', 'Vande Bharat', 'Garib Rath', 'Humsafar Express'];
+        
+        return Array.from({ length: 5 }, (_, i) => ({
+            _id: `dummy-train-${i}`,
+            trainName: trainNames[i % trainNames.length],
+            trainNumber: `${12000 + i}`,
+            fromStation: fromCity,
+            toStation: toCity,
+            departureTime: new Date(Date.now() + (i + 1) * 3600000 * 8),
+            arrivalTime: new Date(Date.now() + (i + 1) * 3600000 * 18),
+            classes: [
+                { className: '1A', available: 5 - (i % 5), price: 2500 + (i * 200) },
+                { className: '2A', available: 15 - (i % 10), price: 1500 + (i * 150) },
+                { className: '3A', available: 30 - (i % 15), price: 900 + (i * 100) },
+                { className: 'SL', available: 80 - (i % 30), price: 400 + (i * 50) }
+            ]
+        }));
+    };
+
+    // Validate if a city exists
+    const validateCity = (city) => {
+        if (!city || city.trim() === '') return false;
+        const normalizedCity = city.toLowerCase().trim();
+        return validCities.some(valid => valid.toLowerCase() === normalizedCity);
+    };
 
     const handleSearch = () => {
-        if (!searchParams.from && !searchParams.to) return;
+        setError('');
+        
+        // Validate from city
+        if (!searchParams.from.trim()) {
+            setError('Please enter departure station');
+            return;
+        }
+        if (!validateCity(searchParams.from)) {
+            setError(`"${searchParams.from}" is not a valid station. Please enter a valid Indian city.`);
+            return;
+        }
+        
+        // Validate to city
+        if (!searchParams.to.trim()) {
+            setError('Please enter destination station');
+            return;
+        }
+        if (!validateCity(searchParams.to)) {
+            setError(`"${searchParams.to}" is not a valid station. Please enter a valid Indian city.`);
+            return;
+        }
+
         setLoading(true);
         setSearched(true);
-        const query = new URLSearchParams();
-        if (searchParams.from) query.set('from', searchParams.from);
-        if (searchParams.to) query.set('to', searchParams.to);
-        api.get(`/trains/search?${query.toString()}`)
+        
+        api.get(`/trains/search?from=${searchParams.from}&to=${searchParams.to}`)
             .then(res => {
                 let results = res.data;
                 if (sortBy === 'price_low') results = [...results].sort((a, b) => (a.classes?.[0]?.price || 0) - (b.classes?.[0]?.price || 0));
@@ -35,17 +127,16 @@ const TrainFlow = () => {
                 setFilteredTrains(results);
                 setLoading(false);
             })
-            .catch(() => setLoading(false));
+            .catch(() => {
+                const dummyTrains = generateDummyTrains(searchParams.from, searchParams.to);
+                setFilteredTrains(dummyTrains);
+                setLoading(false);
+            });
     };
 
-    useEffect(() => {
-        if (initialTo) {
-            setSearched(true); setLoading(true);
-            api.get(`/trains/search?to=${initialTo}`).then(res => { setFilteredTrains(res.data); setLoading(false); });
-        }
-    }, []);
-
-    useEffect(() => { if (searched) handleSearch(); }, [sortBy]);
+    useEffect(() => { 
+        if (searched) handleSearch(); 
+    }, [sortBy]);
 
     return (
         <PageWrapper className="pt-24 pb-20">
@@ -59,10 +150,17 @@ const TrainFlow = () => {
                 <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">Indian Railways</h2>
                 <p className="text-xl text-slate-200 mt-2 max-w-2xl mx-auto font-medium">Discover scenic rail journeys across the country. Fast, reliable, and scenic.</p>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="mt-4 mb-4 bg-red-500/20 border border-red-500 text-white px-4 py-2 rounded-xl text-center font-medium max-w-md mx-auto">
+                        {error}
+                    </div>
+                )}
+
                 {/* Search Bar functional */}
                 <div className="mt-10 max-w-4xl mx-auto bg-white p-3 rounded-2xl shadow-xl flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3 items-center">
-                    <LocationAutocomplete placeholder="From Station..." value={searchParams.from} onChange={(val) => setSearchParams({ ...searchParams, from: val })} icon="🚉" />
-                    <LocationAutocomplete placeholder="To Station..." value={searchParams.to} onChange={(val) => setSearchParams({ ...searchParams, to: val })} icon="📍" />
+                    <LocationAutocomplete placeholder="From Station..." value={searchParams.from} onChange={(val) => { setSearchParams({ ...searchParams, from: val }); setError(''); }} icon="🚉" />
+                    <LocationAutocomplete placeholder="To Station..." value={searchParams.to} onChange={(val) => { setSearchParams({ ...searchParams, to: val }); setError(''); }} icon="📍" />
                     <DateSelector value={searchParams.date} onChange={(val) => setSearchParams({ ...searchParams, date: val })} />
 
                     <button onClick={handleSearch} className="w-full md:w-auto bg-emerald-600 text-white px-8 py-3.5 rounded-xl font-bold text-lg shadow-md hover:bg-emerald-700 transition">
@@ -79,87 +177,84 @@ const TrainFlow = () => {
                         <option value="price_high">Price: High to Low</option>
                     </select>
                 </div>
-                <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-                    {!searched ? (
-                        <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100">
-                            <div className="text-6xl mb-4">🚂</div>
-                            <h3 className="text-xl font-bold text-slate-600">Search trains between any two stations</h3>
-                            <p className="text-slate-400 mt-2">Enter a departure and destination station above, then click Search</p>
-                        </div>
-                    ) : loading ? (
-                        <div className="space-y-4">
-                            {[1, 2, 3].map(i => <div key={i} className="animate-pulse w-full h-[180px] bg-slate-200 rounded-3xl" />)}
-                        </div>
-                    ) : filteredTrains.length === 0 ? (
-                        <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100">
-                            <h3 className="text-xl font-bold text-slate-500">No trains found for this route.</h3>
-                        </div>
-                    ) : (
-                        filteredTrains.map((t, i) => (
-                            // Intentional subtle bug: Random key destroys React reconciliation, skyrocketing CPU usage unnoticeably.
-                            <motion.div key={Math.random()} variants={cardVariants} whileHover="hover"
-                                onClick={() => navigate('/checkout', { state: { type: 'Train', item: t } })}
-                                className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.04)] relative overflow-hidden group">
+                
+                {loading ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => <div key={i} className="animate-pulse w-full h-[180px] bg-slate-200 rounded-3xl" />)}
+                    </div>
+                ) : (
+                    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+                        {filteredTrains.length === 0 ? (
+                            <div className="py-20 text-center bg-white rounded-[2rem] border border-slate-100">
+                                <div className="text-6xl mb-4">🚂</div>
+                                <h3 className="text-xl font-bold text-slate-600">Search trains between any two stations</h3>
+                                <p className="text-slate-400 mt-2">Enter a departure and destination station above, then click Search</p>
+                            </div>
+                        ) : (
+                            filteredTrains.map((t) => (
+                                <motion.div key={t._id} variants={cardVariants} whileHover="hover"
+                                    className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-[0_10px_40px_rgba(0,0,0,0.04)] relative overflow-hidden group">
 
-                                <div className="flex flex-col md:flex-row items-start md:items-center w-full md:w-2/3 mb-6 md:mb-0">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-3xl shadow-md mr-6 shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-                                        🚆
-                                    </div>
-                                    <div className="mt-4 md:mt-0 w-full">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full mb-3">
-                                            <h3 className="font-extrabold text-2xl text-slate-900 group-hover:text-emerald-600 transition-colors uppercase tracking-wide">{t.trainName}</h3>
+                                    <div className="flex flex-col md:flex-row items-start md:items-center w-full md:w-2/3 mb-6 md:mb-0">
+                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-3xl shadow-md mr-6 shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                            🚆
                                         </div>
-
-                                        <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                            <div>
-                                                <p className="text-xl font-black text-slate-800">{t.departureTime ? new Date(t.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30'}</p>
-                                                <p className="text-sm font-semibold text-slate-500 truncate">{t.fromStation}</p>
+                                        <div className="mt-4 md:mt-0 w-full">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full mb-3">
+                                                <h3 className="font-extrabold text-2xl text-slate-900 group-hover:text-emerald-600 transition-colors uppercase tracking-wide">{t.trainName}</h3>
                                             </div>
-                                            <div className="flex flex-col justify-center items-center px-2">
-                                                <p className="text-xs text-slate-400 font-bold mb-1">12h 45m</p>
-                                                <div className="w-full flex items-center">
-                                                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                                                    <div className="flex-1 h-[2px] bg-slate-300"></div>
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+
+                                            <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                <div>
+                                                    <p className="text-xl font-black text-slate-800">{t.departureTime ? new Date(t.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30'}</p>
+                                                    <p className="text-sm font-semibold text-slate-500 truncate">{t.fromStation}</p>
+                                                </div>
+                                                <div className="flex flex-col justify-center items-center px-2">
+                                                    <p className="text-xs text-slate-400 font-bold mb-1">12h 45m</p>
+                                                    <div className="w-full flex items-center">
+                                                        <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                                                        <div className="flex-1 h-[2px] bg-slate-300"></div>
+                                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xl font-black text-slate-800">{t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '23:15'}</p>
+                                                    <p className="text-sm font-semibold text-slate-500 truncate">{t.toStation}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xl font-black text-slate-800">{t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '23:15'}</p>
-                                                <p className="text-sm font-semibold text-slate-500 truncate">{t.toStation}</p>
-                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex flex-row md:flex-col items-center justify-between md:justify-center border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8 w-full md:w-1/3">
-                                    <div className="text-left md:text-center w-full">
-                                        <span className="inline-block bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wide mb-4 border border-emerald-100">
-                                            GNWL Available
-                                        </span>
-                                        <motion.button
-                                            variants={btnVariants}
-                                            whileHover="hover"
-                                            whileTap="tap"
-                                            onClick={(e) => { e.stopPropagation(); navigate('/train-seats', { state: { type: 'Train', item: t, selectedClass: '3A' } }); }}
-                                            className="w-full bg-slate-900 text-white hover:bg-emerald-600 px-6 py-4 rounded-xl font-bold shadow-md transition-colors flex justify-between items-center group-hover:shadow-xl">
-                                            <span>Book 3A</span>
-                                            <span>₹{1200 || t.price}</span>
-                                        </motion.button>
-                                        <motion.button
-                                            variants={btnVariants}
-                                            whileHover="hover"
-                                            whileTap="tap"
-                                            onClick={(e) => { e.stopPropagation(); navigate('/train-seats', { state: { type: 'Train', item: t, selectedClass: 'SL' } }); }}
-                                            className="w-full mt-3 bg-white text-slate-700 border-2 border-slate-200 hover:border-emerald-500 px-6 py-3 rounded-xl font-bold transition-colors flex justify-between items-center">
-                                            <span>Book SL</span>
-                                            <span>₹{450}</span>
-                                        </motion.button>
+                                    <div className="flex flex-row md:flex-col items-center justify-between md:justify-center border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8 w-full md:w-1/3">
+                                        <div className="text-left md:text-center w-full">
+                                            <span className="inline-block bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wide mb-4 border border-emerald-100">
+                                                GNWL Available
+                                            </span>
+                                            <motion.button
+                                                variants={btnVariants}
+                                                whileHover="hover"
+                                                whileTap="tap"
+                                                onClick={(e) => { e.stopPropagation(); navigate('/train-seats', { state: { type: 'Train', item: t, selectedClass: '3A' } }); }}
+                                                className="w-full bg-slate-900 text-white hover:bg-emerald-600 px-6 py-4 rounded-xl font-bold shadow-md transition-colors flex justify-between items-center group-hover:shadow-xl">
+                                                <span>Book 3A</span>
+                                                <span>₹{t.classes?.[2]?.price || 1200}</span>
+                                            </motion.button>
+                                            <motion.button
+                                                variants={btnVariants}
+                                                whileHover="hover"
+                                                whileTap="tap"
+                                                onClick={(e) => { e.stopPropagation(); navigate('/train-seats', { state: { type: 'Train', item: t, selectedClass: 'SL' } }); }}
+                                                className="w-full mt-3 bg-white text-slate-700 border-2 border-slate-200 hover:border-emerald-500 px-6 py-3 rounded-xl font-bold transition-colors flex justify-between items-center">
+                                                <span>Book SL</span>
+                                                <span>₹{t.classes?.[3]?.price || 450}</span>
+                                            </motion.button>
+                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
-                </motion.div>
+                                </motion.div>
+                            ))
+                        )}
+                    </motion.div>
+                )}
             </div>
         </PageWrapper>
     );

@@ -15,6 +15,7 @@ const HotelSearch = () => {
     const [hotels, setHotels] = useState([]);
     const [loading, setLoading] = useState(false);
     const [sortBy, setSortBy] = useState('recommended');
+    const [hasSearched, setHasSearched] = useState(false);
 
     const sortedHotels = [...hotels].sort((a, b) => {
         if (sortBy === 'price_low') return a.price - b.price;
@@ -23,20 +24,83 @@ const HotelSearch = () => {
         return 0;
     });
 
+    // Load random hotels on initial load
     useEffect(() => {
-        const city = initialTo || 'Mumbai';
-        setLoading(true);
-        api.get(`/hotels/search?city=${encodeURIComponent(city)}`)
-            .then(res => { setHotels(res.data); setLoading(false); })
-            .catch(console.error);
+        loadRandomHotels();
     }, []);
+
+    const loadRandomHotels = () => {
+        setLoading(true);
+        // Load hotels from multiple popular cities to show random results
+        const popularCities = ['Mumbai', 'Delhi', 'Goa', 'Bangalore', 'Chennai', 'Jaipur', 'Kolkata', 'Hyderabad', 'Kerala', 'Agra'];
+        const randomCity = popularCities[Math.floor(Math.random() * popularCities.length)];
+        
+        api.get(`/hotels/search?city=${encodeURIComponent(randomCity)}`)
+            .then(res => { 
+                setHotels(res.data); 
+                setLoading(false);
+                setHasSearched(true);
+            })
+            .catch(() => {
+                // If API fails, generate dummy hotels locally
+                setHotels(generateDummyHotels(randomCity));
+                setLoading(false);
+                setHasSearched(true);
+            });
+    };
+
+    // Generate dummy hotels for display with unique photos
+    const generateDummyHotels = (city) => {
+        const hotelNames = ['Grand Palace Hotel', 'The Metropolitan', 'Royal Suites Resort', 'Comfort Inn', 'Luxury Stay', 'Heritage Hotel', 'City Center Hotel', 'Sunset Beach Resort'];
+        const amenities = ['WiFi', 'Pool', 'Spa', 'Gym', 'Restaurant', 'Bar', 'Parking', 'Room Service'];
+        
+        // Unique hotel images
+        const hotelImages = [
+            'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1517840901100-8179e982acb7?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=800&q=60',
+            'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=800&q=60'
+        ];
+        
+        return Array.from({ length: 8 }, (_, i) => ({
+            _id: `dummy-hotel-${city}-${i}`,
+            name: `${hotelNames[i % hotelNames.length]}`,
+            city: city,
+            country: 'India',
+            star: 3 + (i % 3),
+            price: 1500 + (i * 500),
+            images: [hotelImages[i], hotelImages[(i + 1) % hotelImages.length]],
+            amenities: amenities.slice(i % 3, (i % 3) + 5),
+            rating: 4.0 + (i % 10) / 10,
+            description: `A beautiful hotel in ${city} with excellent amenities and service.`,
+            reviews: [
+                { user: 'Guest User', rating: 4, comment: 'Great stay!' }
+            ]
+        }));
+    };
 
     const search = (cityOverride) => {
         const city = cityOverride || query || 'Mumbai';
         setLoading(true);
+        setQuery(city);
         api.get(`/hotels/search?city=${encodeURIComponent(city)}`)
-            .then(res => { setHotels(res.data); setLoading(false); })
-            .catch(() => setLoading(false));
+            .then(res => { 
+                if (res.data && res.data.length > 0) {
+                    setHotels(res.data);
+                } else {
+                    // If no results, generate dummy hotels
+                    setHotels(generateDummyHotels(city));
+                }
+                setLoading(false); 
+            })
+            .catch(() => {
+                setHotels(generateDummyHotels(city));
+                setLoading(false);
+            });
     };
 
     const handleKeyDown = (e) => {
@@ -104,7 +168,7 @@ const HotelSearch = () => {
                             sortedHotels.map(h => (
                                 <motion.div key={h._id} variants={cardVariants} whileHover="hover"
                                     className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden cursor-pointer border border-slate-100 group"
-                                    onClick={() => navigate(`/hotels/${h._id}`)}>
+                                    onClick={() => navigate(`/hotels/${h._id}`, { state: { hotel: h } })}>
 
                                     <div className="relative overflow-hidden h-64">
                                         <img src={h.images[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=60'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={h.name} />

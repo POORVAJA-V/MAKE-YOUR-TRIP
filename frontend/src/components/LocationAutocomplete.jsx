@@ -1,39 +1,54 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Comprehensive list of Indian and international cities
+const popularCities = [
+    // Major Indian Cities
+    'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Jaipur', 'Goa', 'Kochi',
+    'Ahmedabad', 'Lucknow', 'Chandigarh', 'Nagpur', 'Indore', 'Bhopal', 'Patna', 'Vadodara', 'Agra', 'Nashik',
+    'Varanasi', 'Surat', 'Rajkot', 'Jammu', 'Shrinagar', 'Ludhiana', 'Amritsar', 'Dehradun', 'Haridwar', 'Rishikesh',
+    'Mysore', 'Coimbatore', 'Madurai', 'Trivandrum', 'Bhubaneswar', 'Ranchi', 'Guwahati', 'Siliguri', 'Kanpur', 'Allahabad',
+    'Ajmer', 'Jodhpur', 'Udaipur', 'Kota', 'Bilaspur', 'Raipur', 'Durg', 'Bhilai', 'Warangal', 'Gwalior',
+    'Jabalpur', 'Erode', 'Vijayawada', 'Tiruchirappalli', 'Belgaum', 'Dhanbad', 'Amravati', 'Navi Mumbai', 'Thane', 'Visakhapatnam',
+    // International Cities
+    'Dubai', 'London', 'Paris', 'New York', 'Singapore', 'Bangkok', 'Tokyo', 'Sydney', 'Los Angeles', 'San Francisco',
+    'Chicago', 'Toronto', 'Vancouver', 'Melbourne', 'Auckland', 'Hong Kong', 'Shanghai', 'Beijing', 'Seoul', 'Abu Dhabi',
+    'Doha', 'Muscat', 'Kuwait', 'Riyadh', 'Jeddah', 'Cairo', 'Istanbul', 'Moscow', 'Berlin', 'Frankfurt',
+    'Rome', 'Milan', 'Madrid', 'Barcelona', 'Amsterdam', 'Brussels', 'Vienna', 'Prague', 'Budapest', 'Warsaw',
+    'Stockholm', 'Copenhagen', 'Oslo', 'Helsinki', 'Reykjavik', 'Dublin', 'Manchester', 'Birmingham', 'Edinburgh', 'Lisbon',
+    'Athens', 'Zurich', 'Geneva', 'Nice', 'Marseille', 'Lyon', 'Munich', 'Hamburg', 'Phuket', 'Krabi',
+    'Chiang Mai', 'Bali', 'Jakarta', 'Kuala Lumpur', 'Manila', 'Hanoi', 'Ho Chi Minh City', 'Taipei', 'Osaka', 'Kyoto',
+    'Nagoya', 'Sapporo', 'Fukuoka', 'Busan', 'Jeju', 'Macau', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Xian',
+    'Hangzhou', 'Nanjing', 'Tianjin', 'Qingdao', 'Dalian', 'Xiamen', 'Changsha', 'Wuhan', 'Zhengzhou', 'Kunming'
+];
 
 const LocationAutocomplete = ({ placeholder, value, onChange, icon }) => {
     const [query, setQuery] = useState(value || '');
     const [suggestions, setSuggestions] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
     const wrapperRef = useRef(null);
+    const inputRef = useRef(null);
 
-    // Debounced search to OpenStreetMap Nominatim API
     useEffect(() => {
-        if (query.length < 3) {
-            setSuggestions([]);
-            return;
+        if (value !== undefined && value !== query) {
+            setQuery(value);
         }
+    }, [value]);
 
-        const delayDebounceFn = setTimeout(async () => {
-            setLoading(true);
-            try {
-                // Using Nominatim for free global location data
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&featuretype=city`);
-                const data = await response.json();
-                setSuggestions(data);
-            } catch (error) {
-                console.error("Error fetching locations:", error);
-            } finally {
-                setLoading(false);
-            }
-        }, 500);
-
-        return () => clearTimeout(delayDebounceFn);
+    useEffect(() => {
+        if (query.length > 0) {
+            const filtered = popularCities.filter(city => 
+                city.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 8);
+            setSuggestions(filtered);
+        } else {
+            setSuggestions(popularCities.slice(0, 8));
+        }
     }, [query]);
 
     useEffect(() => {
-        // Click outside handler
         function handleClickOutside(event) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
                 setIsOpen(false);
@@ -41,49 +56,58 @@ const LocationAutocomplete = ({ placeholder, value, onChange, icon }) => {
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
+    }, []);
 
-    const handleSelect = (suggestion) => {
-        const placeName = suggestion.display_name.split(',')[0] + ', ' + suggestion.display_name.split(',').pop().trim();
-        setQuery(placeName);
-        onChange(placeName);
+    const handleSelect = (city) => {
+        setQuery(city);
+        onChange(city);
         setIsOpen(false);
     };
 
+    const handleInputChange = (e) => {
+        const newValue = e.target.value;
+        setQuery(newValue);
+        onChange(newValue);
+        setIsOpen(true);
+    };
+
+    const showSuggestions = isFocused && suggestions.length > 0;
+
     return (
         <div ref={wrapperRef} className="relative w-full">
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+            <div 
+                className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all cursor-text"
+                onClick={() => inputRef.current?.focus()}
+            >
                 <span className="text-xl mr-3 opacity-60">{icon || '📍'}</span>
                 <input
+                    ref={inputRef}
                     type="text"
-                    className="flex-1 bg-transparent border-none focus:outline-none text-slate-800 font-medium placeholder-slate-400 text-sm md:text-base"
+                    className="flex-1 bg-transparent border-none focus:outline-none text-slate-800 font-medium placeholder-slate-400 text-sm md:text-base w-full"
                     placeholder={placeholder || "Enter a city..."}
                     value={query}
-                    onChange={(e) => {
-                        setQuery(e.target.value);
-                        onChange(e.target.value);
-                        setIsOpen(true);
-                    }}
-                    onFocus={() => query.length >= 3 && setIsOpen(true)}
+                    onChange={handleInputChange}
+                    onFocus={() => { setIsFocused(true); setIsOpen(true); }}
+                    onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                    autoComplete="off"
                 />
-                {loading && <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
             </div>
 
             <AnimatePresence>
-                {isOpen && suggestions.length > 0 && (
+                {showSuggestions && (
                     <motion.ul
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-md border border-slate-100 rounded-xl shadow-xl max-h-60 overflow-y-auto"
+                        className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-lg max-h-60 overflow-y-auto"
                     >
-                        {suggestions.map((s, i) => (
+                        {suggestions.map((city, i) => (
                             <li key={i}
-                                onClick={() => handleSelect(s)}
-                                className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors flex flex-col"
+                                onClick={() => handleSelect(city)}
+                                className="px-5 py-3 hover:bg-blue-50 cursor-pointer border-b border-slate-50 last:border-0 transition-colors flex items-center"
                             >
-                                <span className="font-bold text-slate-800 text-sm">{s.display_name.split(',')[0]}</span>
-                                <span className="text-xs text-slate-500 truncate">{s.display_name}</span>
+                                <span className="text-lg mr-3 opacity-50">📍</span>
+                                <span className="font-medium text-slate-800 text-sm">{city}</span>
                             </li>
                         ))}
                     </motion.ul>
@@ -94,3 +118,4 @@ const LocationAutocomplete = ({ placeholder, value, onChange, icon }) => {
 };
 
 export default LocationAutocomplete;
+

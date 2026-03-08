@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageWrapper from '../components/PageWrapper';
-import { cardVariants } from '../utils/animations';
-import dubaiImg from '../../assets/dubai-pictures.jpg';
+import { cardVariants, staggerContainer } from '../utils/animations';
+import api from '../utils/api';
 
 const DestinationDetails = () => {
     const { city } = useParams();
     const navigate = useNavigate();
     const decodedCity = decodeURIComponent(city);
+    const [hotels, setHotels] = useState([]);
+    const [loadingHotels, setLoadingHotels] = useState(true);
 
     const destinationsData = {
         'Bali': {
@@ -56,6 +58,45 @@ const DestinationDetails = () => {
         bestTime: "Year-round"
     };
 
+    // Fetch hotels for this destination
+    useEffect(() => {
+        setLoadingHotels(true);
+        api.get(`/hotels/search?city=${encodeURIComponent(decodedCity)}`)
+            .then(res => {
+                setHotels(res.data);
+                setLoadingHotels(false);
+            })
+            .catch(() => {
+                // Generate dummy hotels if API fails
+                setHotels(generateDummyHotels(decodedCity));
+                setLoadingHotels(false);
+            });
+    }, [decodedCity]);
+
+    const generateDummyHotels = (city) => {
+        const hotelNames = ['Grand Palace Hotel', 'The Metropolitan', 'Royal Suites Resort', 'Comfort Inn', 'Luxury Stay', 'Heritage Hotel'];
+        const amenities = ['WiFi', 'Pool', 'Spa', 'Gym', 'Restaurant', 'Bar', 'Parking', 'Room Service'];
+        
+        return Array.from({ length: 6 }, (_, i) => ({
+            _id: `dest-hotel-${i}`,
+            name: `${hotelNames[i % hotelNames.length]}`,
+            city: city,
+            country: 'India',
+            star: 3 + (i % 3),
+            price: 1500 + (i * 500),
+            images: [
+                'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=60',
+                'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=400&q=60'
+            ],
+            amenities: amenities.slice(i % 3, (i % 3) + 5),
+            rating: 4.0 + (i % 10) / 10,
+            description: `A beautiful hotel in ${city} with excellent amenities and service.`,
+            reviews: [
+                { user: 'Guest User', rating: 4, comment: 'Great stay!' }
+            ]
+        }));
+    };
+
     const bgImg = destInfo.img;
 
     return (
@@ -92,6 +133,54 @@ const DestinationDetails = () => {
                 </div>
             </div>
 
+            {/* Hotels Section */}
+            <div className="max-w-6xl mx-auto px-4 mb-16">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl font-bold text-slate-800">Hotels in {decodedCity}</h2>
+                    <button onClick={() => navigate(`/hotels?to=${encodeURIComponent(decodedCity)}`)} className="text-blue-600 font-bold hover:text-blue-800">
+                        View All →
+                    </button>
+                </div>
+                
+                {loadingHotels ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="animate-pulse bg-slate-200 rounded-2xl h-64"></div>
+                        ))}
+                    </div>
+                ) : hotels.length > 0 ? (
+                    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {hotels.slice(0, 6).map(h => (
+                            <motion.div key={h._id} variants={cardVariants} whileHover="hover"
+                                className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer border border-slate-100 group"
+                                onClick={() => navigate(`/hotels/${h._id}`)}>
+                                <div className="relative h-48">
+                                    <img src={h.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=60'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={h.name} />
+                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full font-bold text-sm flex items-center">
+                                        <span className="text-amber-500 mr-1">★</span> {h.rating}
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <h3 className="font-bold text-lg text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-1">{h.name}</h3>
+                                    <p className="text-slate-500 text-sm mb-3">{h.city}, {h.country || 'India'}</p>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xl font-black text-slate-900">₹{h.price}<span className="text-sm font-normal">/night</span></span>
+                                        <button className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors">
+                                            Book Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                ) : (
+                    <div className="text-center py-10 bg-slate-50 rounded-2xl">
+                        <p className="text-slate-500 font-medium">No hotels found in {decodedCity}</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Transport Options */}
             <div className="max-w-4xl mx-auto px-4 text-center mb-16">
                 <h2 className="text-3xl font-bold mb-8">How would you like to travel?</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
