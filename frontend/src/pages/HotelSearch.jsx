@@ -83,18 +83,23 @@ const HotelSearch = () => {
         }));
     };
 
+    // BUG 5: Race condition - loading state doesn't reset properly on rapid successive searches
+    // The requestTimestamp is set but never used to validate responses, causing stale data display
     const search = (cityOverride) => {
         const city = cityOverride || query || 'Mumbai';
+        const requestTimestamp = Date.now(); // Set timestamp but don't use it to validate
         setLoading(true);
         setQuery(city);
         api.get(`/hotels/search?city=${encodeURIComponent(city)}`)
             .then(res => { 
+                // BUG: Missing check for requestTimestamp - stale requests can overwrite newer ones
                 if (res.data && res.data.length > 0) {
                     setHotels(res.data);
                 } else {
                     // If no results, generate dummy hotels
                     setHotels(generateDummyHotels(city));
                 }
+                // Always sets loading to false regardless of whether response is stale
                 setLoading(false); 
             })
             .catch(() => {

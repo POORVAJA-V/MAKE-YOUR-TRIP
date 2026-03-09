@@ -18,6 +18,83 @@ const Checkout = () => {
     const amount = item?.price || 2500;
     const token = localStorage.getItem('token');
 
+    // Format card number with space after every 4 digits
+    const formatCardNumber = (value) => {
+        const digits = value.replace(/\D/g, '').slice(0, 16);
+        const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+        return formatted;
+    };
+
+    // Format expiry date with leading zero and slash
+    const formatExpiryDate = (value) => {
+        const digits = value.replace(/\D/g, '').slice(0, 4);
+        if (digits.length >= 2) {
+            return digits.slice(0, 2) + '/' + digits.slice(2);
+        }
+        return digits;
+    };
+
+    // Validate card number
+    const validateCardNumber = (card) => {
+        const digits = card.replace(/\s/g, '');
+        if (digits.length !== 16) {
+            return 'Card number must be exactly 16 digits';
+        }
+        if (!/^\d+$/.test(digits)) {
+            return 'Card number must contain only digits';
+        }
+        return null;
+    };
+
+    // Validate expiry date
+    const validateExpiryDate = (expiry) => {
+        if (!expiry.includes('/') || expiry.length !== 5) {
+            return 'Invalid Expiry date format (use MM/YY)';
+        }
+        const [month, year] = expiry.split('/');
+        const monthNum = parseInt(month, 10);
+        const yearNum = parseInt(year, 10);
+        
+        if (monthNum < 1 || monthNum > 12) {
+            return 'Month must be between 01 and 12';
+        }
+        if (yearNum < 25) {
+            return 'Card has expired';
+        }
+        return null;
+    };
+
+    // Validate CVV
+    const validateCVV = (cvv) => {
+        if (cvv.length !== 3) {
+            return 'CVV must be exactly 3 digits';
+        }
+        if (!/^\d+$/.test(cvv)) {
+            return 'CVV must contain only digits';
+        }
+        return null;
+    };
+
+    const handleCardChange = (e) => {
+        const formatted = formatCardNumber(e.target.value);
+        setPaymentData({ ...paymentData, card: formatted });
+    };
+
+    const handleExpiryChange = (e) => {
+        const formatted = formatExpiryDate(e.target.value);
+        setPaymentData({ ...paymentData, expiry: formatted });
+    };
+
+    const handleCVVChange = (e) => {
+        const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
+        setPaymentData({ ...paymentData, cvv: digits });
+    };
+
+    const handleNameChange = (e) => {
+        // Convert to uppercase
+        setPaymentData({ ...paymentData, name: e.target.value.toUpperCase() });
+    };
+
     const handleTriggerPayment = () => {
         setShowRazorpay(true);
     };
@@ -34,21 +111,30 @@ const Checkout = () => {
             return;
         }
 
-        // Validate card details
-        if (paymentData.card.replace(/\s/g, '').length < 16) {
-            setError('Invalid Card Number (16 digits required)');
+        // Validate card number - must be exactly 16 digits
+        const cardError = validateCardNumber(paymentData.card);
+        if (cardError) {
+            setError(cardError);
             return;
         }
-        if (!paymentData.expiry.includes('/') || paymentData.expiry.length < 5) {
-            setError('Invalid Expiry (MM/YY)');
+
+        // Validate expiry date - MM/YY format with month 1-12
+        const expiryError = validateExpiryDate(paymentData.expiry);
+        if (expiryError) {
+            setError(expiryError);
             return;
         }
-        if (paymentData.cvv.length < 3) {
-            setError('Invalid CVV');
+
+        // Validate CVV - must be exactly 3 digits
+        const cvvError = validateCVV(paymentData.cvv);
+        if (cvvError) {
+            setError(cvvError);
             return;
         }
-        if (!paymentData.name) {
-            setError('Name on card required');
+
+        // Validate name
+        if (!paymentData.name || paymentData.name.trim().length === 0) {
+            setError('Name on card is required');
             return;
         }
 
@@ -282,27 +368,27 @@ const Checkout = () => {
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Card Number</label>
                                     <input type="text" maxLength="19" placeholder="1234 5678 9101 1121"
                                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium"
-                                        value={paymentData.card} onChange={e => setPaymentData({ ...paymentData, card: e.target.value })} />
+                                        value={paymentData.card} onChange={handleCardChange} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Expiry (MM/YY)</label>
-                                        <input type="text" placeholder="12/25" maxLength="5"
+                                        <input type="text" placeholder="MM/YY" maxLength="5"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-center"
-                                            value={paymentData.expiry} onChange={e => setPaymentData({ ...paymentData, expiry: e.target.value })} />
+                                            value={paymentData.expiry} onChange={handleExpiryChange} />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">CVV</label>
                                         <input type="password" maxLength="3" placeholder="***"
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-center tracking-widest"
-                                            value={paymentData.cvv} onChange={e => setPaymentData({ ...paymentData, cvv: e.target.value })} />
+                                            value={paymentData.cvv} onChange={handleCVVChange} />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Cardholder Name</label>
-                                    <input type="text" placeholder="John Doe"
+                                    <input type="text" placeholder="JOHN DOE"
                                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium"
-                                        value={paymentData.name} onChange={e => setPaymentData({ ...paymentData, name: e.target.value })} />
+                                        value={paymentData.name} onChange={handleNameChange} />
                                 </div>
 
                                 {error && <p className="text-red-500 text-sm font-bold text-center mt-2 animate-bounce">{error}</p>}

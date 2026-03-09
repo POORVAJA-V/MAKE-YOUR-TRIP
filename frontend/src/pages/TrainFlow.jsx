@@ -134,9 +134,11 @@ const TrainFlow = () => {
             });
     };
 
+    // BUG 7: Infinite loop potential - useEffect calls handleSearch on sortBy change
+    // This triggers API call unnecessarily and can cause infinite re-renders in certain conditions
     useEffect(() => { 
         if (searched) handleSearch(); 
-    }, [sortBy]);
+    }, [sortBy]); // Missing dependency: handleSearch should be in dependency array but isn't
 
     return (
         <PageWrapper className="pt-24 pb-20">

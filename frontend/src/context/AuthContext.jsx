@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('token');
-        localStorage.removeItem('use'); // BUG 2: Subtle testing bug where the local storage key is typoed (use instead of user)
+        localStorage.removeItem('user');
     };
 
     return (

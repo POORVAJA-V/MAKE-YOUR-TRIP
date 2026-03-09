@@ -333,12 +333,17 @@ const generateHotels = (city, count = 8) => {
 };
 
 // ── Flights ───────────────────────────────────────────────────────────────────
+// BUG 8: Partial and case-insensitive city matching causes wrong results
+// Searching "Del" will match "Delhi" and "Dellhi" incorrectly
+// This is a subtle bug that causes unexpected search results
 app.get('/api/v1/flights/search', async (req, res) => {
     const { from, to } = req.query;
     let flights = generateFlights(from, to, 7);
     try {
         let q = {};
-        if (from) q.departureCity = new RegExp(from, 'i');
+        // BUG: Using partial match with RegExp - "Del" will match "Delhi", "Delhi" etc.
+        // This should use exact match or proper validation
+        if (from) q.departureCity = new RegExp(from, 'i'); // 'i' makes it case-insensitive AND partial
         if (to) q.arrivalCity = new RegExp(to, 'i');
         const dbFlights = await Flight.find(q).lean();
         if (dbFlights.length > 0) {

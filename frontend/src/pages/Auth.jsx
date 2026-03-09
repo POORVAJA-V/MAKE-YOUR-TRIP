@@ -15,13 +15,27 @@ const Auth = ({ type }) => {
         e.preventDefault();
         try {
             const endpoint = type === 'login' ? '/auth/login' : '/auth/register';
+            console.log('Attempting to connect to:', api.defaults.baseURL + endpoint);
             const res = await api.post(endpoint, formData);
+            console.log('Response received:', res.data);
 
             login(res.data);
             navigate('/');
         } catch (err) {
-            const msg = err.response?.data?.message || err.message;
-            alert(`Authentication Error: ${msg}`);
+            console.error('Auth error:', err);
+            let msg = 'Authentication failed';
+            
+            if (err.response) {
+                // Server responded with error
+                msg = err.response.data?.message || `Server error: ${err.response.status}`;
+            } else if (err.request) {
+                // No response received - likely server not running
+                msg = 'Cannot connect to server. Please ensure the backend is running on port 5000.';
+            } else {
+                msg = err.message || 'Unknown error occurred';
+            }
+            
+            alert(`Error: ${msg}`);
         }
     };
 

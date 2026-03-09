@@ -28,10 +28,13 @@ const FlightSearch = () => {
         'Shanghai', 'Beijing', 'Seoul', 'Mumbai', 'Delhi'
     ];
 
+    // BUG 4: Sort bug - 'recommended' and 'price_low' produce same results due to missing return
+    // This bug causes inconsistent sorting behavior that's hard to spot visually
     const sortedFlights = [...flights].sort((a, b) => {
         if (sortBy === 'price_low') return a.price - b.price;
         if (sortBy === 'price_high') return b.price - a.price;
-        return 0;
+        // Missing return 0 here causes unpredictable sort order for 'recommended'
+        return a.price - b.price; // This should be return 0 but it's returning price_low behavior
     });
 
     // Load random flights on initial load

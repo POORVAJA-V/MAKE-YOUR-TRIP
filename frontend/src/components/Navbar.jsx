@@ -66,25 +66,48 @@ const Navbar = () => {
                             { name: 'Cabs', path: '/cabs' }
                         ].map(nav => (
                             <Link key={nav.name} to={nav.path} onClick={() => setMobileMenuOpen(false)}
-                                className={`px-6 py-4 font-bold border-b border-slate-50 transition-colors ${isActive(nav.path) ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                className={`px-6 py-5 font-bold border-b border-slate-100 transition-colors ${isActive(nav.path) ? 'text-blue-600 bg-blue-50' : 'text-slate-600 hover:bg-slate-50'}`}>
                                 {nav.name}
                             </Link>
                         ))}
+                        
+                        {/* Mobile User Menu - Only show My Trips and Logout here (not in profile dropdown on mobile) */}
+                        <div className="border-t border-slate-100 mt-2">
+                            {user ? (
+                                <>
+                                    <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="px-6 py-5 font-bold text-slate-600 hover:bg-slate-50 flex items-center">
+                                        <span className="mr-3">🧳</span> My Trips
+                                    </Link>
+                                    <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full text-left px-6 py-5 font-bold text-rose-600 hover:bg-rose-50 flex items-center">
+                                        <span className="mr-3">🚪</span> Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="px-6 py-5 font-bold text-slate-600 hover:bg-slate-50 flex items-center">
+                                        <span className="mr-3">🔑</span> Log In
+                                    </Link>
+                                    <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="px-6 py-5 font-bold text-blue-600 hover:bg-blue-50 flex items-center">
+                                        <span className="mr-3">✈️</span> Sign Up
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
                 {user ? (
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="flex items-center space-x-2 bg-white/60 hover:bg-white p-1.5 pl-4 pr-3 border border-slate-200 rounded-full shadow-sm backdrop-blur-md transition-all cursor-pointer"
+                            className="flex items-center space-x-2 bg-white/60 hover:bg-white p-1 pl-2 pr-3 border border-slate-200 rounded-full shadow-sm backdrop-blur-md transition-all cursor-pointer"
                         >
-                            <span className="text-slate-700 font-bold text-sm">
+                            <span className="text-slate-700 font-bold text-sm hidden sm:inline">
                                 Hi, <span className="text-blue-600">{user.firstName || 'Traveler'}</span>
                             </span>
-                            <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-black text-xs">
+                            <div className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-black text-[10px]">
                                 {(user.firstName || 'T')[0].toUpperCase()}
                             </div>
                         </button>
@@ -102,12 +125,6 @@ const Navbar = () => {
                                         <p className="font-bold text-slate-800 truncate">{user.firstName} {user.lastName}</p>
                                         <p className="text-xs text-slate-500 font-medium truncate">{user.email}</p>
                                     </div>
-                                    <div className="p-2 flex flex-col">
-
-                                        <Link to="/bookings" onClick={() => setDropdownOpen(false)} className="px-4 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors flex items-center">
-                                            <span className="mr-3 text-lg">🧳</span> My Trips
-                                        </Link>
-                                    </div>
                                     <div className="p-2 border-t border-slate-100">
                                         <button onClick={() => { logout(); setDropdownOpen(false); }} className="w-full text-left px-4 py-2.5 bg-rose-50 hover:bg-rose-100 rounded-xl text-sm font-bold text-rose-600 transition-colors flex items-center">
                                             <span className="mr-3 text-lg">🚪</span> Logout
@@ -118,7 +135,7 @@ const Navbar = () => {
                         </AnimatePresence>
                     </div>
                 ) : (
-                    <div className="flex items-center space-x-3">
+                    <div className="hidden lg:flex items-center space-x-3">
                         <Link to="/login" className="text-slate-600 hover:text-blue-600 font-bold text-sm transition-colors">Log In</Link>
                         <Link to="/register" className="bg-slate-900 text-white hover:bg-blue-600 px-5 py-2.5 rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all">Sign Up</Link>
                     </div>

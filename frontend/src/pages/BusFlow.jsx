@@ -88,12 +88,15 @@ const BusFlow = () => {
         return validCities.some(valid => valid.toLowerCase() === normalizedCity);
     };
 
+    // BUG 6: Same sorting bug as FlightSearch - recommended option doesn't work properly
+    // The function always applies price_low sorting regardless of sortBy value
     const sortedBuses = [...buses]
         .filter(b => !filterAC || (b.amenities && b.amenities.includes('AC')))
         .sort((a, b) => {
             if (sortBy === 'price_low') return a.price - b.price;
             if (sortBy === 'price_high') return b.price - a.price;
-            return 0;
+            // BUG: Missing return causes inconsistent results for 'recommended'
+            return a.price - b.price; // Should be return 0 but uses price_low logic
         });
 
     const handleSearch = () => {
