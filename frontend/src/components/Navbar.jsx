@@ -71,17 +71,12 @@ const Navbar = () => {
                             </Link>
                         ))}
                         
-                        {/* Mobile User Menu - Only show My Trips and Logout here (not in profile dropdown on mobile) */}
+                        {/* Mobile User Menu - Only Logout (My Trips is in desktop dropdown) */}
                         <div className="border-t border-slate-100 mt-2">
                             {user ? (
-                                <>
-                                    <Link to="/bookings" onClick={() => setMobileMenuOpen(false)} className="px-6 py-5 font-bold text-slate-600 hover:bg-slate-50 flex items-center">
-                                        <span className="mr-3">🧳</span> My Trips
-                                    </Link>
-                                    <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full text-left px-6 py-5 font-bold text-rose-600 hover:bg-rose-50 flex items-center">
-                                        <span className="mr-3">🚪</span> Logout
-                                    </button>
-                                </>
+                                <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full text-left px-6 py-5 font-bold text-rose-600 hover:bg-rose-50 flex items-center">
+                                    <span className="mr-3">🚪</span> Logout
+                                </button>
                             ) : (
                                 <>
                                     <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="px-6 py-5 font-bold text-slate-600 hover:bg-slate-50 flex items-center">
@@ -124,6 +119,11 @@ const Navbar = () => {
                                     <div className="p-4 border-b border-slate-50 bg-slate-50">
                                         <p className="font-bold text-slate-800 truncate">{user.firstName} {user.lastName}</p>
                                         <p className="text-xs text-slate-500 font-medium truncate">{user.email}</p>
+                                    </div>
+                                    <div className="p-2 flex flex-col">
+                                        <Link to="/bookings" onClick={() => setDropdownOpen(false)} className="px-4 py-2.5 hover:bg-slate-50 rounded-xl text-sm font-bold text-slate-700 transition-colors flex items-center">
+                                            <span className="mr-3 text-lg">🧳</span> My Trips
+                                        </Link>
                                     </div>
                                     <div className="p-2 border-t border-slate-100">
                                         <button onClick={() => { logout(); setDropdownOpen(false); }} className="w-full text-left px-4 py-2.5 bg-rose-50 hover:bg-rose-100 rounded-xl text-sm font-bold text-rose-600 transition-colors flex items-center">
